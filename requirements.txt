@@ -4,3 +4,4 @@ numpy
 scikit-learn
 google-generativeai
 python-docx
+PyPDF2
