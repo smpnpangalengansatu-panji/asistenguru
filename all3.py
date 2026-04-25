@@ -72,11 +72,10 @@ def apply_custom_ui():
         hr { margin: 2rem 0 !important; border-top: 2px solid #F1F5F9 !important; }
         </style>
         
-      <div class="main-header">
-  		  	<h1>🎓 AA Guru Panji</h1> 
-    		<p> Asisten Administrasi Guru Pangalengan hiji </p>
-    		
-		</div>
+        <div class="main-header">
+            <h1>🎓 AA Guru </h1>
+            <p>Asisten Administrasi Guru</p>
+        </div>
 		
     """, unsafe_allow_html=True)
 
