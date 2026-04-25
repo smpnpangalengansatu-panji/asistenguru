@@ -73,8 +73,8 @@ def apply_custom_ui():
         </style>
         
       <div class="main-header">
-  		  	<h2>🎓 AA Guru Panji</h2> 
-    		<p>Asisten Administrasi Guru Pangalengan hiji</p>
+  		  	<h1>🎓 AA Guru Panji</h1> 
+    		<p> Asisten Administrasi Guru Pangalengan hiji </p>
     		
 		</div>
 		
