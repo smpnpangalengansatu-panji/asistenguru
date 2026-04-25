@@ -75,7 +75,7 @@ def apply_custom_ui():
         <div class="main-header">
             <h1>🎓 AA Guru Panji </h1>
             <p>Asisten Administrasi Guru Pangalengan hiji</p>
-			 <p>Created by : Iman Nuriman 2026</p>
+			
         </div>
     """, unsafe_allow_html=True)
 
