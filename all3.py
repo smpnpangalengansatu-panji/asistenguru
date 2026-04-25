@@ -73,7 +73,7 @@ def apply_custom_ui():
         </style>
         
         <div class="main-header">
-            <h1>🎓 AA Guru Panji </h1>
+            <h2>🎓 AA Guru Panji </h2>
             <p>Asisten Administrasi Guru Pangalengan hiji - Created by : Iman Nuriman 2026 </p>
 			
         </div>
