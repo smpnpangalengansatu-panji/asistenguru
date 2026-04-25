@@ -72,12 +72,12 @@ def apply_custom_ui():
         hr { margin: 2rem 0 !important; border-top: 2px solid #F1F5F9 !important; }
         </style>
         
-
-		<div class="main-header">
-  		  	<h2>🎓 AA Guru Panji</h2> 
-    		<p>Asisten Administrasi Guru Pangalengan hiji</p>
-    		<p>Dikembangkan oleh: Iman Nuriman, ST.</p>
-		</div>
+        <div class="main-header">
+            <h1>🎓 AA Guru Panji </h1>
+            <p>Asisten Administrasi Guru Pangalengan hiji - Created by : Iman Nuriman 2026 </p>
+			
+        </div>
+		
     """, unsafe_allow_html=True)
 
 # Panggil Fungsi UI
