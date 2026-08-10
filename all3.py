@@ -4,13 +4,12 @@ from docx import Document
 from docx.shared import Pt
 from io import BytesIO
 import PyPDF2
+import streamlit.components.v1 as components  # <--- Tambahkan baris ini
 
 # --- 1. KONFIGURASI HALAMAN ---
 st.set_page_config(page_title="AA Guru", layout="wide", page_icon="🎓")
 
 
-# --- SISIPAN KODE CSS & HTML UNTUK TAMPILAN PROFESIONAL ---
-# --- SISIPAN KODE CSS & HTML UNTUK TAMPILAN PROFESIONAL ---
 # --- SISIPAN KODE CSS & HTML UNTUK TAMPILAN PROFESIONAL (DESAIN BARU) ---
 def apply_custom_ui():
     st.markdown(
@@ -61,9 +60,9 @@ def apply_custom_ui():
         }
 
         
-        /* 3. SUB-BAGIAN (Label Pil Ungu Muda - Paksa dengan !important) */
+        /* 3. SUB-BAGIAN (Label Pil Orange Muda - Paksa dengan !important) */
         .ai-output-card h3 {
-            background-color: #EEF2FF !important; 
+            background-color: #ffeeea !important; 
             color: #312E81 !important;
             padding: 8px 20px !important;
             border-radius: 25px !important; /* Lengkungan pil yang lebih bulat */
@@ -83,9 +82,23 @@ def apply_custom_ui():
             margin-bottom: 1.5rem;
         }
         /* Menyembunyikan Header Markdown (opsional agar mirip gambar) */
-        .ai-output-card thead {
+        /* .ai-output-card thead {
             display: none; 
         }
+        */
+        
+        /* Menampilkan header tabel dengan latar belakang abu-abu terang / biru muda */
+            .ai-output-card thead {
+                background-color: #f1f5f9;
+                color: #1e293b;
+                text-align: left;
+            }
+
+            .ai-output-card th, .ai-output-card td {
+                padding: 10px 12px;
+                border: 1px solid #cbd5e1;
+            }
+            
         .ai-output-card td {
             padding: 12px 15px;
             border-bottom: 1px solid #E5E7EB; /* Garis bawah saja yang terlihat */
@@ -99,6 +112,20 @@ def apply_custom_ui():
             font-weight: 600;
             width: 35%;
             color: #4B5563;
+        }
+        /* 5. SUB-SUB-BAGIAN (Label Pil Kuning - Heading 4 / ####) */
+        .ai-output-card h4 {
+            background-color: #FEF08A !important; /* Kuning Pastel Soft */
+            color: #713F12 !important; /* Teks Cokelat Tua kontras tinggi */
+            padding: 6px 16px !important;
+            border-radius: 20px !important; /* Bentuk pil melengkung */
+            display: inline-block !important;
+            font-size: 0.95rem !important;
+            font-weight: 700 !important;
+            border-bottom: none !important;
+            margin-top: 1.2rem !important;
+            margin-bottom: 0.6rem !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
         }
         </style>
     """,
@@ -122,83 +149,125 @@ from io import BytesIO
 # --- 🪄 FUNGSI SIHIR: WARNA LATAR PARAGRAF & SEL TABEL DI WORD ---
 def set_paragraph_bg_color(paragraph, color_hex):
     """Fungsi khusus memanipulasi XML Word untuk memberi warna latar paragraf"""
-    shading_elm = OxmlElement('w:shd')
-    shading_elm.set(qn('w:val'), 'clear')
-    shading_elm.set(qn('w:color'), 'auto')
-    shading_elm.set(qn('w:fill'), color_hex) 
+    shading_elm = OxmlElement("w:shd")
+    shading_elm.set(qn("w:val"), "clear")
+    shading_elm.set(qn("w:color"), "auto")
+    shading_elm.set(qn("w:fill"), color_hex)
     pPr = paragraph._p.get_or_add_pPr()
     pPr.append(shading_elm)
+
 
 def set_cell_bg_color(cell, color_hex):
     """Fungsi khusus memanipulasi XML Word untuk memberi warna latar pada SEL TABEL"""
     tcPr = cell._element.get_or_add_tcPr()
-    shading_elm = OxmlElement('w:shd')
-    shading_elm.set(qn('w:val'), 'clear')
-    shading_elm.set(qn('w:color'), 'auto')
-    shading_elm.set(qn('w:fill'), color_hex)
+    shading_elm = OxmlElement("w:shd")
+    shading_elm.set(qn("w:val"), "clear")
+    shading_elm.set(qn("w:color"), "auto")
+    shading_elm.set(qn("w:fill"), color_hex)
     tcPr.append(shading_elm)
 
+
 # --- FUNGSI PARSER DOCX (VERSI ULTIMATE TAMPILAN WEB) ---
+# --- FUNGSI PARSER DOCX (Dengan Pendeteksi Warna Label Deep Learning) ---
 def add_markdown_paragraph(doc_or_cell, text, style=None):
     if style:
         p = doc_or_cell.add_paragraph(style=style)
     else:
         p = doc_or_cell.add_paragraph()
-    parts = text.split('**')
+
+    parts = text.split("**")
     for i, part in enumerate(parts):
+        if not part:
+            continue  # Lewati jika kosong
+
         run = p.add_run(part)
-        if i % 2 != 0: 
+
+        # Jika indeks ganjil, berarti ini teks yang diapit ** (Teks Tebal)
+        if i % 2 != 0:
             run.bold = True
+
+            # 🎨 DETEKSI LABEL DAN BERI WARNA KHUSUS
+            part_upper = part.upper()
+
+            # Kategori Kognitif
+            if "[Memahami]" in part_upper:
+                run.font.color.rgb = RGBColor(0x25, 0x63, 0xEB)  # Biru Terang
+            elif "[Mengaplikasi]" in part_upper:
+                run.font.color.rgb = RGBColor(0x16, 0xA3, 0x4A)  # Hijau Daun
+            elif "[Merefleksi]" in part_upper:
+                run.font.color.rgb = RGBColor(0xD9, 0x77, 0x06)  # Oranye/Amber
+
+            # Kategori Suasana (Deep Learning)
+            elif "[Berkesadaran]" in part_upper:
+                run.font.color.rgb = RGBColor(0x93, 0x33, 0xEA)  # Ungu Mindful
+            elif "[Bermakna]" in part_upper:
+                run.font.color.rgb = RGBColor(0xDC, 0x26, 0x26)  # Merah Tegas
+            elif "[Menyenangkan]" in part_upper:
+                run.font.color.rgb = RGBColor(0xE1, 0x1D, 0x48)  # Merah Muda/Rose
+
     return p
 
+
+# --- FUNGSI PARSER DOCX (VERSI ULTIMATE: DUKUNG HEADING 1-4 & HIGHLIGHT KUNING) ---
 def create_formatted_docx(text, title):
     text = text.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
     doc = Document()
-    
+
     title_head = doc.add_heading(title, 0)
-    title_head.alignment = 1 
-    
-    lines = text.split('\n')
+    title_head.alignment = 1
+
+    lines = text.split("\n")
     is_table = False
     table_data = []
     in_identitas_block = False
 
     def render_table(is_identitas=False):
-        if not table_data: return
-        valid_data = [row for row in table_data if not all(c.strip() == '-' or c.strip() == '' for c in row[0])]
-        if not valid_data: return
-        
+        if not table_data:
+            return
+        valid_data = [
+            row
+            for row in table_data
+            if not all(c.strip() == "-" or c.strip() == "" for c in row[0])
+        ]
+        if not valid_data:
+            return
+
         cols_count = max(len(row) for row in valid_data)
         table = doc.add_table(rows=len(valid_data), cols=cols_count)
-        
-        # Tabel identitas pakai garis tipis bawaan, tabel biasa garis tegas
-        table.style = 'Table Grid' if not is_identitas else 'Normal Table'
-            
+        table.style = "Table Grid" if not is_identitas else "Normal Table"
+
         for i, row in enumerate(valid_data):
             for j, cell_text in enumerate(row):
                 if j < cols_count:
-                    clean_cell = cell_text.replace('**', '').strip()
+                    clean_cell = cell_text.replace("**", "").strip()
                     table.cell(i, j).text = clean_cell
-                    
-                    # 💡 PEWARNAAN TABEL IDENTITAS (Warna Hijau Muda di Kolom Kiri)
+
+                    # Mewarnai kolom kiri untuk tabel identitas
                     if is_identitas and j == 0:
                         set_cell_bg_color(table.cell(i, j), "F7FEE7")
-                    
+
+                    # 💡 KODE AJAIB DITAMBAHKAN DI SINI:
+                    # Mewarnai header (baris pertama) untuk tabel biasa
                     if not is_identitas and i == 0:
+                        set_cell_bg_color(table.cell(i, j), "F1F5F9") # Warna abu-abu terang kebiruan
                         for paragraph in table.cell(i, j).paragraphs:
-                            for run in paragraph.runs: run.bold = True
+                            for run in paragraph.runs:
+                                run.bold = True
 
     for line in lines:
         clean_line = line.strip()
-        leading_spaces = len(line) - len(line.lstrip()) 
-        
-        if "## A. IDENTITAS" in clean_line.upper() or "## A. IDENTITAS MODUL" in clean_line.upper():
+        leading_spaces = len(line) - len(line.lstrip())
+
+        if (
+            "## A. IDENTITAS" in clean_line.upper()
+            or "## A. IDENTITAS MODUL" in clean_line.upper()
+        ):
             if is_table:
                 render_table()
                 table_data = []
                 is_table = False
             in_identitas_block = True
-            heading_text = clean_line.replace('##', '').replace('**', '').strip()
+            heading_text = clean_line.replace("##", "").replace("**", "").strip()
             p = doc.add_paragraph()
             run = p.add_run(heading_text)
             run.bold = True
@@ -209,35 +278,58 @@ def create_formatted_docx(text, title):
             p.paragraph_format.space_after = Pt(12)
             continue
 
-        # 💡 PENANGKAP SUB-JUDUL (Heading 3) - Tampilan PIL UNGU
-        elif clean_line.startswith('### '):
+        # 💡 1. PENANGKAP HEADING 4 (####) - HIGHLIGHT KUNING
+        elif clean_line.startswith("#### "):
             if is_table:
                 render_table(is_identitas=in_identitas_block)
                 table_data = []
                 is_table = False
                 in_identitas_block = False
-                
-            heading_text = clean_line.replace('###', '').replace('**', '').strip()
+
+            heading_text = clean_line.replace("####", "").replace("**", "").strip()
+            p = doc.add_paragraph()
+            run = p.add_run(heading_text)
+            run.bold = True
+            run.font.size = Pt(11)
+            run.font.color.rgb = RGBColor(0x71, 0x3F, 0x12)  # Teks Cokelat Tua
+
+            set_paragraph_bg_color(p, "FEF08A")  # Latar Kuning Highlight (Soft Yellow)
+
+            p.paragraph_format.space_before = Pt(10)
+            p.paragraph_format.space_after = Pt(4)
+            p.paragraph_format.left_indent = Pt(28)  # Menjorok lebih dalam dari H3
+            continue
+
+        # 💡 2. PENANGKAP HEADING 3 (###) - PIL 0range
+        elif clean_line.startswith("### "):
+            if is_table:
+                render_table(is_identitas=in_identitas_block)
+                table_data = []
+                is_table = False
+                in_identitas_block = False
+
+            heading_text = clean_line.replace("###", "").replace("**", "").strip()
             p = doc.add_paragraph()
             run = p.add_run(heading_text)
             run.bold = True
             run.font.size = Pt(12)
-            run.font.color.rgb = RGBColor(0x31, 0x2E, 0x81) # Teks Ungu Tua
-            
-            set_paragraph_bg_color(p, "EEF2FF") # Latar Ungu Muda
-            
+            run.font.color.rgb = RGBColor(0x31, 0x2E, 0x81)
+
+            set_paragraph_bg_color(p, "ffeeea")  # Latar Orange Muda
+
             p.paragraph_format.space_before = Pt(12)
             p.paragraph_format.space_after = Pt(6)
-            p.paragraph_format.left_indent = Pt(18) # Sedikit menjorok ke dalam
+            p.paragraph_format.left_indent = Pt(18)
             continue
 
-        elif clean_line.startswith('## '):
+        # 💡 3. PENANGKAP HEADING 2 (##) - KOTAK BIRU
+        elif clean_line.startswith("## "):
             if is_table:
                 render_table(is_identitas=in_identitas_block)
                 table_data = []
                 is_table = False
             in_identitas_block = False
-            heading_text = clean_line.replace('##', '').replace('**', '').strip()
+            heading_text = clean_line.replace("##", "").replace("**", "").strip()
             p = doc.add_paragraph()
             run = p.add_run(heading_text)
             run.bold = True
@@ -248,57 +340,127 @@ def create_formatted_docx(text, title):
             p.paragraph_format.space_after = Pt(12)
             continue
 
-        if clean_line.startswith('|') and clean_line.endswith('|'):
-            if '---' in clean_line: continue
-            cells = [c.strip() for c in clean_line.strip('|').split('|')]
+        if clean_line.startswith("|") and clean_line.endswith("|"):
+            if "---" in clean_line:
+                continue
+            cells = [c.strip() for c in clean_line.strip("|").split("|")]
             table_data.append(cells)
             is_table = True
             continue
         else:
             if is_table and clean_line == "":
-                continue 
-            elif is_table and not clean_line.startswith('|'):
+                continue
+            elif is_table and not clean_line.startswith("|"):
                 render_table(is_identitas=in_identitas_block)
                 table_data = []
                 is_table = False
                 in_identitas_block = False
-        
-        if not clean_line: continue
-            
-        if clean_line.startswith('# '):
-            heading_text = clean_line.replace('#', '').replace('**', '').strip()
+
+        if not clean_line:
+            continue
+
+        if clean_line.startswith("# "):
+            heading_text = clean_line.replace("#", "").replace("**", "").strip()
             doc.add_heading(heading_text, level=1)
-            
-        elif re.match(r'^[a-z]\.\s', clean_line):
+
+        # Penomoran Abjad (a., b., c.) - Menjorok ke dalam sedikit
+        elif re.match(r"^[a-z]\.\s", clean_line):
             p = add_markdown_paragraph(doc, clean_line)
             p.paragraph_format.left_indent = Pt(36)
             p.paragraph_format.first_line_indent = Pt(-18)
 
-        elif re.match(r'^\d+\.\s', clean_line):
+        # Penomoran Angka (1., 2., 3.) - Paling luar (sejajar margin)
+        elif re.match(r"^\d+\.\s", clean_line):
             p = add_markdown_paragraph(doc, clean_line)
             p.paragraph_format.left_indent = Pt(18)
             p.paragraph_format.first_line_indent = Pt(-18)
-            
-        elif clean_line.startswith(('* ', '- ')):
+
+        # Bullet and Numbering Utama & Cabang
+        elif clean_line.startswith(("* ", "- ")):
             text_part = clean_line[2:]
             if leading_spaces >= 2:
+                # Sub-bullet bercabang (○) disejajarkan dengan abjad
                 p = add_markdown_paragraph(doc, "○   " + text_part)
-                p.paragraph_format.left_indent = Pt(54)
-                p.paragraph_format.first_line_indent = Pt(-18)
-            else:
-                p = add_markdown_paragraph(doc, "•   " + text_part)
                 p.paragraph_format.left_indent = Pt(36)
                 p.paragraph_format.first_line_indent = Pt(-18)
-        
+            else:
+                # Bullet utama (•) disejajarkan sejajar dengan angka di pinggir
+                p = add_markdown_paragraph(doc, "•   " + text_part)
+                p.paragraph_format.left_indent = Pt(18)
+                p.paragraph_format.first_line_indent = Pt(-18)
+
         else:
             add_markdown_paragraph(doc, clean_line)
-            
+
     if is_table:
         render_table(is_identitas=in_identitas_block)
+
+    # =======================================================
+    # 💡 4. PROSES PEWARNAAN LABEL KHUSUS KE DALAM FILE WORD
+    # =======================================================
+    colors_map = {
+        "[Memahami]": RGBColor(0x25, 0x63, 0xEB),      # Biru
+        "[Mengaplikasi]": RGBColor(0x16, 0xA3, 0x4A),  # Hijau
+        "[Merefleksi]": RGBColor(0xD9, 0x77, 0x06),    # Orange
+        "[Berkesadaran]": RGBColor(0x93, 0x33, 0xEA),  # Ungu
+        "[Bermakna]": RGBColor(0xDC, 0x26, 0x26),      # Merah
+        "[Menyenangkan]": RGBColor(0xE1, 0x1D, 0x48)   # Pink
+    }
+    label_pattern = r"(\[Memahami\]|\[Mengaplikasi\]|\[Merefleksi\]|\[Berkesadaran\]|\[Bermakna\]|\[Menyenangkan\])"
+
+    def apply_color_to_paragraph(p):
+        if not p.runs:
+            return
         
+        # Simpan format asli dari setiap potongan teks (run)
+        original_runs = []
+        for run in p.runs:
+            original_runs.append({
+                "text": run.text,
+                "bold": run.bold,
+                "italic": run.italic,
+                "underline": run.underline,
+                "color": run.font.color.rgb if run.font.color else None
+            })
+            
+        # Kosongkan teks di paragraf tersebut (tapi pertahankan spasi/indentasi)
+        p.clear()
+        
+        # Tulis ulang teksnya sambil menyisipkan warna yang sesuai
+        for run_data in original_runs:
+            parts = re.split(label_pattern, run_data["text"])
+            for part in parts:
+                if not part:
+                    continue
+                new_run = p.add_run(part)
+                new_run.italic = run_data["italic"]
+                new_run.underline = run_data["underline"]
+                
+                if part in colors_map:
+                    new_run.bold = True
+                    new_run.font.color.rgb = colors_map[part]
+                else:
+                    new_run.bold = run_data["bold"]
+                    if run_data["color"]:
+                        new_run.font.color.rgb = run_data["color"]
+
+    # Terapkan ke semua teks paragraf biasa
+    for p in doc.paragraphs:
+        apply_color_to_paragraph(p)
+        
+    # Terapkan ke semua teks di dalam tabel (jika label ada di tabel)
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for p in cell.paragraphs:
+                    apply_color_to_paragraph(p)
+    # =======================================================
+
+
     target_stream = BytesIO()
     doc.save(target_stream)
     return target_stream.getvalue()
+
 
 # --- FUNGSI GLOBAL ---
 def call_gemini_ai(api_key, prompt):
@@ -456,6 +618,41 @@ elif page == "2. Alur (ATP) & Pemetaan JP":
             )
 
 elif page == "3. Modul Ajar Expert":
+    st.markdown("""
+    <style>
+    @media print {
+        /* Sembunyikan sidebar, header, footer, dan tombol-tombol saat dicetak */
+        [data-testid="stSidebar"], 
+        header, 
+        footer, 
+        .stButton, 
+        .stDownloadButton, 
+        .stDivider,
+        iframe {
+            display: none !important;
+        }
+        
+        /* Buat area modul memenuhi seluruh halaman PDF */
+        .main .block-container {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+        }
+        
+        /* Hilangkan border kartu agar seperti dokumen resmi */
+        .ai-output-card {
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            background: white !important;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    
+    
+    
     d = st.session_state.data_modul
 
     if st.session_state.page_modul == 1:
@@ -601,10 +798,31 @@ elif page == "3. Modul Ajar Expert":
                                     ### LINGKUNGAN PEMBELAJARAN : Tuliskan lingkungan pembelajaran yang diinginkan dalam pembelajaran dalam budaya belajar, ruang fisik dan/atau ruang virtual agar tecipta iklim belajar yang aman, nyaman, dan saling memuliakan, contoh : memberikan kepada siswa untuk menyampaikan pendapatnya dalam ruang kelas dan dan forum diskusi pada platform daring (ruang virtual bersifat opsional).
                                     ### PEMANFAATAN DIGITAL (OPSIONAL):Tuliskan pemanfaatan digital untuk menciptakan pembelajaran yang inteaktif, kolaboratif dan kontekstual, contoh : video pembelajaran, platform pembelajaran, perpustakaan digital, forum diskusi daring, aplikasi penilaian, dan sebagainya.
                             ## F. PEMAHAMAN BERMAKNA & PERTANYAAN PEMANTIK: Berisi 3 Pertanyaan HOTS.
-                            ## G. LANGKAH-LANGKAH PEMBELAJARAN (Sintaks {d['model']} buat dalam {d['pertemuan']} pertemuan): Wajib mencakup 3 Kategori Deep Learning: 1. MEMAHAMI (Berkesadaran & Bermakna), 2. MENGAPLIKASI (Berkesadaran, Bermakna, Menyenangkan), 3. MEREFLEKSI (Berkesadaran & Bermakna)
-                                    ### Pendahuluan: Membangun koneksi emosional dan kesadaran (Mindful). 
-                                    ### Kegiatan Inti : Eksplorasi mendalam menggunakan sintaks {d['model']}'
-                                    ### Penutup: Refleksi metakognisi (Apa yang sekarang saya tahu yang sebelumnya saya tidak tahu?).
+                            ## G. LANGKAH-LANGKAH PEMBELAJARAN
+                                    Sintaks {d['model']} buat dalam {d['pertemuan']} pertemuan.
+                                    
+                                    PENTING UNTUK LANGKAH PEMBELAJARAN: Pada setiap rincian kegiatan, Anda WAJIB menyematkan 1 atau maksimal 2 label Deep Learning yang PALING RELEVAN dengan sifat kegiatan tersebut (cetak tebal menggunakan kurung siku). JANGAN digabung semua.
+                                    
+                                    Pilihan Label Kognitif (Pilih salah satu jika relevan):
+                                    - **[Memahami]** 
+                                    - **[Mengaplikasi]** 
+                                    - **[Merefleksi]**
+                                    
+                                    Pilihan Label Suasana / Deep Learning (Pilih yang paling cocok):
+                                    - **[Berkesadaran]** (untuk aktivitas yang butuh fokus, tenang, mindful)
+                                    - **[Bermakna]** (untuk aktivitas kontekstual, nyata, bernalar kritis)
+                                    - **[Menyenangkan]** (untuk aktivitas yang interaktif, gembira, games)
+
+                                    Contoh penulisan di akhir kalimat: 
+                                    "...melakukan permainan estafet bola." **[Mengaplikasi]** **[Menyenangkan]**
+                                    "...merenungkan kesulitan yang dihadapi." **[Merefleksi]** **[Berkesadaran]**
+
+                                    ### Pendahuluan
+                                    (Membangun koneksi emosional - Sisipkan label **[Memahami...]** pada kegiatan yang relevan)
+                                    ### Kegiatan Inti
+                                    (Eksplorasi mendalam sintaks {d['model']} - Sisipkan label **[Mengaplikasi...]** atau **[Memahami...]** pada sintaks yang relevan)
+                                    ### Penutup
+                                    (Refleksi metakognisi - Sisipkan label **[Merefleksi...]** pada kegiatan yang relevan)
                             ## H. ASESMEN: 
                             WAJIB: Sajikan bagian asesmen dalam TABEL TERPISAH dengan ketentuan sebagai berikut:
                                     ### INSTRUMEN ASESMEN : Tuliskan instrumen asesment yang akan dipergunakan selama proses pembelajaran berlangsung dai awal sampai akhir Sajikan dalam tabel.
@@ -619,38 +837,119 @@ elif page == "3. Modul Ajar Expert":
                                     ### Ringkasan Materi Mendalam
                                     ### Glosarium.
 
-            Gunakan bahasa Indonesia yang formal namun mudah dipahami guru dan Bahasa natural tidak seperti Bahasa mesin.
-            """
+                       Gunakan bahasa Indonesia yang formal namun mudah dipahami guru dan Bahasa natural tidak seperti Bahasa mesin.
+                        """
+            
+            # =========================================================
+            # 1. BIKIN AI BEKERJA (Jika modul belum dibuat/masih kosong)
+            # =========================================================
+            if not st.session_state.modul_result:
+                with st.status(
+                    "🚀 AI sedang menyusun perangkat ajar...", expanded=True
+                ) as status:
+                    # Memanggil fungsi AI
+                    st.session_state.modul_result = call_gemini_ai(
+                        st.session_state.api_key, prompt
+                    )
+                    status.update(label="Selesai!", state="complete")
 
-            with st.status(
-                "🚀 AI sedang menyusun perangkat ajar...", expanded=True
-            ) as status:
-                # [PERBAIKAN] Simpan ke session_state agar tidak hilang
-                st.session_state.modul_result = call_gemini_ai(
-                    st.session_state.api_key, prompt
-                )
-                status.update(label="Selesai!", state="complete")
+            # =========================================================
+            # 2. TAMPILKAN HASIL (Jika modul sudah berhasil dibuat)
+            # =========================================================
+            # Pastikan variabel prompt dan variabel d (seperti d['topik']) sudah siap di atas baris ini
 
-        # [PERBAIKAN] Tampilkan hasil dari session_state
+   
+
+    # 1. KUNCI PERBAIKAN: Pakai 'or' di sini agar layar tidak kosong saat tombol download ditekan
+    if st.session_state.modul_result:
+        
+        # 2. PROSES AI (Hanya jalan kalau modul belum ada di memori)
+        if not st.session_state.modul_result:
+            if not st.session_state.api_key:
+                st.error("Masukkan API Key di Sidebar!")
+            else:
+                with st.spinner("🚀 AI sedang menyusun Modul Ajar..."):
+                    st.session_state.modul_result = call_gemini_ai(
+                        st.session_state.api_key, prompt
+                    )
+
+        # 3. TAMPILKAN HASIL & TOMBOL (Jika modul sudah berhasil dibuat)
         if st.session_state.modul_result:
+            
+            # Kita buat salinan khusus untuk web agar teks asli di Word tidak rusak
+            hasil_tampilan_web = st.session_state.modul_result
+
+            hasil_tampilan_web = hasil_tampilan_web.replace(
+                "**[Memahami]**",
+                "<span style='color:#2563EB; font-weight:bold;'>[Memahami]</span>",
+            )
+            hasil_tampilan_web = hasil_tampilan_web.replace(
+                "**[Mengaplikasi]**",
+                "<span style='color:#16A34A; font-weight:bold;'>[Mengaplikasi]</span>",
+            )
+            hasil_tampilan_web = hasil_tampilan_web.replace(
+                "**[Merefleksi]**",
+                "<span style='color:#D97706; font-weight:bold;'>[Merefleksi]</span>",
+            )
+            hasil_tampilan_web = hasil_tampilan_web.replace(
+                "**[Berkesadaran]**",
+                "<span style='color:#9333EA; font-weight:bold;'>[Berkesadaran]</span>",
+            )
+            hasil_tampilan_web = hasil_tampilan_web.replace(
+                "**[Bermakna]**",
+                "<span style='color:#DC2626; font-weight:bold;'>[Bermakna]</span>",
+            )
+            hasil_tampilan_web = hasil_tampilan_web.replace(
+                "**[Menyenangkan]**",
+                "<span style='color:#E11D48; font-weight:bold;'>[Menyenangkan]</span>",
+            )
+
+            # Tampilkan variabel salinan (hasil_tampilan_web) ke layar Streamlit
             st.markdown(
-                f'<div class="ai-output-card">{st.session_state.modul_result}</div>',
+                f'<div class="ai-output-card">{hasil_tampilan_web}</div>',
                 unsafe_allow_html=True,
             )
 
+            # Buat file Word dari st.session_state.modul_result (Teks Asli)
             docx_bytes = create_formatted_docx(
                 st.session_state.modul_result, f"Modul Ajar - {d['topik']}"
             )
 
             st.divider()
-            c_dl, c_new = st.columns([3, 1])
+            # Ubah menjadi 3 kolom: Download Word, Cetak PDF, dan Buat Baru
+            c_dl, c_pdf, c_new = st.columns([2, 2, 1])
+            
             with c_dl:
                 st.download_button(
-                    label="📥 Download Modul Ajar (.docx)",
+                    label="📥 Download Word (.docx)",
                     data=docx_bytes,
                     file_name=f"Modul_Ajar_{d['topik'].replace(' ', '_')}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True
                 )
+                
+            with c_pdf:
+                # Tombol JavaScript untuk memicu fitur cetak/Save PDF browser
+                components.html(
+                    """
+                    <button onclick="window.parent.print()" style="
+                        background-color: #0284c7;
+                        color: white;
+                        border: none;
+                        padding: 9px 16px;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        width: 100%;
+                        font-size: 14px;
+                        font-family: sans-serif;
+                    ">
+                        🖨️ Cetak / Simpan PDF
+                    </button>
+                    """,
+                    height=45
+                )
+
             with c_new:
                 if st.button("🔄 Buat Baru", use_container_width=True):
                     st.session_state.modul_result = ""
@@ -659,17 +958,17 @@ elif page == "3. Modul Ajar Expert":
 
 elif page == "4. Generator Soal & Kisi-kisi":
     st.header("❓ Tahap 4: Bank Soal & Kisi-kisi")
-
+    
     # Ambil data dari Modul Ajar secara otomatis (Sinkronisasi)
     d_modul = st.session_state.data_modul
-
+    
     col_config1, col_config2, col_config3 = st.columns(3)
     with col_config1:
         jenjang = st.selectbox("Jenjang", ["SD", "SMP", "SMA", "SMK"], index=1)
     with col_config2:
-        kelas_soal = st.text_input("Kelas", value=d_modul.get("kelas", ""))
+        kelas_soal = st.text_input("Kelas", value=d_modul.get('kelas', ''))
     with col_config3:
-        mapel_soal = st.text_input("Mata Pelajaran", value=d_modul.get("mapel", ""))
+        mapel_soal = st.text_input("Mata Pelajaran", value=d_modul.get('mapel', ''))
 
     st.subheader("📚 Manajemen Topik")
     # Validasi list_topik agar tidak error saat iterasi
@@ -678,17 +977,9 @@ elif page == "4. Generator Soal & Kisi-kisi":
 
     for i, item in enumerate(st.session_state.list_topik):
         c1, c2, c3 = st.columns([3, 1, 0.5])
-        default_topik = (
-            item["nama"]
-            if item["nama"]
-            else (d_modul.get("topik", "") if i == 0 else "")
-        )
-        st.session_state.list_topik[i]["nama"] = c1.text_input(
-            f"Topik {i+1}", value=default_topik, key=f"topik_input_{i}"
-        )
-        st.session_state.list_topik[i]["jumlah"] = c2.number_input(
-            f"Jml Soal", min_value=1, value=item["jumlah"], key=f"jml_input_{i}"
-        )
+        default_topik = item["nama"] if item["nama"] else (d_modul.get('topik', '') if i == 0 else "")
+        st.session_state.list_topik[i]["nama"] = c1.text_input(f"Topik {i+1}", value=default_topik, key=f"topik_input_{i}")
+        st.session_state.list_topik[i]["jumlah"] = c2.number_input(f"Jml Soal", min_value=1, value=item["jumlah"], key=f"jml_input_{i}")
         if c3.button("🗑️", key=f"del_topik_{i}"):
             if len(st.session_state.list_topik) > 1:
                 st.session_state.list_topik.pop(i)
@@ -705,49 +996,30 @@ elif page == "4. Generator Soal & Kisi-kisi":
         n_pg = f1.number_input("Jumlah PG", min_value=0, value=10)
         n_essay = f2.number_input("Jumlah Essay", min_value=0, value=5)
         n_bs = f3.number_input("Jumlah B/S", min_value=0, value=0)
-
+        
         st.write("### 📊 Tingkat Kesulitan (%)")
         diff_col1, diff_col2, diff_col3 = st.columns(3)
         p_mudah = diff_col1.number_input("Mudah (C1-C2) %", value=30)
         p_sedang = diff_col2.number_input("Sedang (C3-C4) %", value=50)
         p_sulit = diff_col3.number_input("Sulit (C5-C6) %", value=20)
-
+        
         st.write("### 🎨 Pengaturan Gambar")
         img_c1, img_c2 = st.columns(2)
         cb_gambar = img_c1.checkbox("Sertakan Prompt Gambar Detail", value=True)
-        n_gambar = img_c1.number_input(
-            "Jumlah Soal Stimulus Gambar", min_value=0, value=2
-        )
-        gaya_gambar = img_c2.selectbox(
-            "Gaya Visual",
-            [
-                "Diagram Teknis",
-                "Ilustrasi Edukasi",
-                "Foto Realistik",
-                "Sketsa",
-                "Gambar style kartun 3d",
-            ],
-        )
-
-        generate_btn = st.form_submit_button(
-            "🚀 Generate Bank Soal", use_container_width=True
-        )
-
+        n_gambar = img_c1.number_input("Jumlah Soal Stimulus Gambar", min_value=0, value=2)
+        gaya_gambar = img_c2.selectbox("Gaya Visual", ["Diagram Teknis", "Ilustrasi Edukasi", "Foto Realistik", "Sketsa", "Gambar style kartun 3d"])
+        
+        generate_btn = st.form_submit_button("🚀 Generate Bank Soal", use_container_width=True)
+        
         if generate_btn:
             if not st.session_state.api_key:
                 st.error("Masukkan API Key di Sidebar!")
             else:
                 with st.spinner("AI sedang merancang soal berkualitas..."):
                     # Menyiapkan rincian topik untuk prompt
-                    valid_topik = [
-                        t
-                        for t in st.session_state.list_topik
-                        if t["nama"].strip() != ""
-                    ]
-                    rincian_str = "\n".join(
-                        [f"- {t['nama']}: {t['jumlah']} soal" for t in valid_topik]
-                    )
-
+                    valid_topik = [t for t in st.session_state.list_topik if t["nama"].strip() != ""]
+                    rincian_str = "\n".join([f"- {t['nama']}: {t['jumlah']} soal" for t in valid_topik])
+                    
                     prompt_visual = ""
                     if cb_gambar and n_gambar > 0:
                         prompt_visual = f"\nSertakan {n_gambar} soal dengan [Gambar: Prompt: <deskripsi detail>] gaya {gaya_gambar}."
@@ -782,48 +1054,28 @@ elif page == "4. Generator Soal & Kisi-kisi":
                         f"Aturan: Jika SD/SMP opsi A-D, jika SMA/SMK opsi A-E. "
                         f"Cantumkan Level Kognitif di awal soal. Sertakan Kunci Jawaban."
                     )
-
-                    st.session_state.soal_result = call_gemini_ai(
-                        st.session_state.api_key, prompt_soal
-                    )
+                    
+                    st.session_state.soal_result = call_gemini_ai(st.session_state.api_key, prompt_soal)
                     st.rerun()
 
     # [PERBAIKAN] Tampilkan hasil soal di luar form agar tombol kisi-kisi berfungsi
     if st.session_state.soal_result:
-        st.markdown(
-            f'<div class="ai-output-card">{st.session_state.soal_result}</div>',
-            unsafe_allow_html=True,
-        )
-        btn_soal_docx = create_formatted_docx(
-            st.session_state.soal_result, f"Bank Soal {mapel_soal}"
-        )
-        st.download_button(
-            "📥 Unduh Bank Soal (DOCX)", btn_soal_docx, f"Soal_{mapel_soal}.docx"
-        )
+        st.markdown(f'<div class="ai-output-card">{st.session_state.soal_result}</div>', unsafe_allow_html=True)
+        btn_soal_docx = create_formatted_docx(st.session_state.soal_result, f"Bank Soal {mapel_soal}")
+        st.download_button("📥 Unduh Bank Soal (DOCX)", btn_soal_docx, f"Soal_{mapel_soal}.docx")
 
         st.divider()
         st.subheader("📋 Generator Kisi-kisi (BSKAP 046/2025)")
-        if st.button(
-            "✨ Buat Kisi-kisi Otomatis", type="primary", use_container_width=True
-        ):
+        if st.button("✨ Buat Kisi-kisi Otomatis", type="primary", use_container_width=True):
             with st.spinner("Memetakan soal ke CP BSKAP 046/2025..."):
                 prompt_kisi = (
                     f"Buatlah TABEL kisi-kisi berdasarkan soal ini: {st.session_state.soal_result}. "
                     "Gunakan referensi BSKAP No. 046/H/KR/2025. Kolom: No, CP, Elemen, Indikator Soal, Level, Bentuk Soal."
                 )
-                st.session_state.kisikisi_result = call_gemini_ai(
-                    st.session_state.api_key, prompt_kisi
-                )
+                st.session_state.kisikisi_result = call_gemini_ai(st.session_state.api_key, prompt_kisi)
                 st.rerun()
 
         if st.session_state.kisikisi_result:
-            st.markdown(
-                f'<div class="ai-output-card">{st.session_state.kisikisi_result}</div>',
-                unsafe_allow_html=True,
-            )
-            btn_kisi_docx = create_formatted_docx(
-                st.session_state.kisikisi_result, "Kisi-kisi Instrumen Penilaian"
-            )
-            st.download_button(
-                "📥 Unduh Kisi-kisi (DOCX)", btn_kisi_docx, "Kisi_Kisi.docx"
-            )
+            st.markdown(f'<div class="ai-output-card">{st.session_state.kisikisi_result}</div>', unsafe_allow_html=True)
+            btn_kisi_docx = create_formatted_docx(st.session_state.kisikisi_result, "Kisi-kisi Instrumen Penilaian")
+            st.download_button("📥 Unduh Kisi-kisi (DOCX)", btn_kisi_docx, "Kisi_Kisi.docx")
