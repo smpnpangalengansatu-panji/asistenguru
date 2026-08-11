@@ -210,7 +210,7 @@ def add_markdown_paragraph(doc_or_cell, text, style=None):
 
 # --- FUNGSI PARSER DOCX (VERSI ULTIMATE: DUKUNG HEADING 1-4 & HIGHLIGHT KUNING) ---
 def create_formatted_docx(text, title):
-    text = text.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+    # 1. Tidak ada lagi replace <br> global di sini agar tabel aman
     doc = Document()
 
     title_head = doc.add_heading(title, 0)
@@ -239,17 +239,16 @@ def create_formatted_docx(text, title):
         for i, row in enumerate(valid_data):
             for j, cell_text in enumerate(row):
                 if j < cols_count:
+                    # 2. Tangani <br> menjadi enter secara aman KHUSUS di dalam sel tabel
                     clean_cell = cell_text.replace("**", "").strip()
+                    clean_cell = clean_cell.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
                     table.cell(i, j).text = clean_cell
 
-                    # Mewarnai kolom kiri untuk tabel identitas
                     if is_identitas and j == 0:
                         set_cell_bg_color(table.cell(i, j), "F7FEE7")
 
-                    # 💡 KODE AJAIB DITAMBAHKAN DI SINI:
-                    # Mewarnai header (baris pertama) untuk tabel biasa
                     if not is_identitas and i == 0:
-                        set_cell_bg_color(table.cell(i, j), "F1F5F9") # Warna abu-abu terang kebiruan
+                        set_cell_bg_color(table.cell(i, j), "F1F5F9")
                         for paragraph in table.cell(i, j).paragraphs:
                             for run in paragraph.runs:
                                 run.bold = True
@@ -278,7 +277,6 @@ def create_formatted_docx(text, title):
             p.paragraph_format.space_after = Pt(12)
             continue
 
-        # 💡 1. PENANGKAP HEADING 4 (####) - HIGHLIGHT KUNING
         elif clean_line.startswith("#### "):
             if is_table:
                 render_table(is_identitas=in_identitas_block)
@@ -291,16 +289,13 @@ def create_formatted_docx(text, title):
             run = p.add_run(heading_text)
             run.bold = True
             run.font.size = Pt(11)
-            run.font.color.rgb = RGBColor(0x71, 0x3F, 0x12)  # Teks Cokelat Tua
-
-            set_paragraph_bg_color(p, "FEF08A")  # Latar Kuning Highlight (Soft Yellow)
-
+            run.font.color.rgb = RGBColor(0x71, 0x3F, 0x12)
+            set_paragraph_bg_color(p, "FEF08A")
             p.paragraph_format.space_before = Pt(10)
             p.paragraph_format.space_after = Pt(4)
-            p.paragraph_format.left_indent = Pt(28)  # Menjorok lebih dalam dari H3
+            p.paragraph_format.left_indent = Pt(28)
             continue
 
-        # 💡 2. PENANGKAP HEADING 3 (###) - PIL 0range
         elif clean_line.startswith("### "):
             if is_table:
                 render_table(is_identitas=in_identitas_block)
@@ -314,15 +309,12 @@ def create_formatted_docx(text, title):
             run.bold = True
             run.font.size = Pt(12)
             run.font.color.rgb = RGBColor(0x31, 0x2E, 0x81)
-
-            set_paragraph_bg_color(p, "ffeeea")  # Latar Orange Muda
-
+            set_paragraph_bg_color(p, "EEF2FF")
             p.paragraph_format.space_before = Pt(12)
             p.paragraph_format.space_after = Pt(6)
             p.paragraph_format.left_indent = Pt(18)
             continue
 
-        # 💡 3. PENANGKAP HEADING 2 (##) - KOTAK BIRU
         elif clean_line.startswith("## "):
             if is_table:
                 render_table(is_identitas=in_identitas_block)
@@ -340,63 +332,70 @@ def create_formatted_docx(text, title):
             p.paragraph_format.space_after = Pt(12)
             continue
 
-        if clean_line.startswith("|") and clean_line.endswith("|"):
+        # 3. PENDETEKSI TABEL YANG LEBIH PINTAR (Anti Acak-acakan)
+        if "|" in clean_line and not clean_line.startswith(("#", ">")):
             if "---" in clean_line:
+                is_table = True
                 continue
-            cells = [c.strip() for c in clean_line.strip("|").split("|")]
-            table_data.append(cells)
-            is_table = True
+            
+            baris_bersih = clean_line.strip()
+            if baris_bersih.startswith("|"): baris_bersih = baris_bersih[1:]
+            if baris_bersih.endswith("|"): baris_bersih = baris_bersih[:-1]
+            
+            cells = [c.strip() for c in baris_bersih.split("|")]
+            
+            if len(cells) > 1:
+                table_data.append(cells)
+                is_table = True
+                continue
+                
+        if is_table and clean_line == "":
             continue
-        else:
-            if is_table and clean_line == "":
-                continue
-            elif is_table and not clean_line.startswith("|"):
-                render_table(is_identitas=in_identitas_block)
-                table_data = []
-                is_table = False
-                in_identitas_block = False
+        elif is_table and "|" not in clean_line:
+            render_table(is_identitas=in_identitas_block)
+            table_data = []
+            is_table = False
+            in_identitas_block = False
 
         if not clean_line:
             continue
 
+        # 4. Tangani <br> secara aman untuk paragraf di LUAR tabel
+        safe_line = clean_line.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+
         if clean_line.startswith("# "):
-            heading_text = clean_line.replace("#", "").replace("**", "").strip()
+            heading_text = safe_line.replace("#", "").replace("**", "").strip()
             doc.add_heading(heading_text, level=1)
 
-        # Penomoran Abjad (a., b., c.) - Menjorok ke dalam sedikit
         elif re.match(r"^[a-z]\.\s", clean_line):
-            p = add_markdown_paragraph(doc, clean_line)
+            p = add_markdown_paragraph(doc, safe_line)
             p.paragraph_format.left_indent = Pt(36)
             p.paragraph_format.first_line_indent = Pt(-18)
 
-        # Penomoran Angka (1., 2., 3.) - Paling luar (sejajar margin)
         elif re.match(r"^\d+\.\s", clean_line):
-            p = add_markdown_paragraph(doc, clean_line)
+            p = add_markdown_paragraph(doc, safe_line)
             p.paragraph_format.left_indent = Pt(18)
             p.paragraph_format.first_line_indent = Pt(-18)
 
-        # Bullet and Numbering Utama & Cabang
         elif clean_line.startswith(("* ", "- ")):
-            text_part = clean_line[2:]
+            text_part = safe_line[2:]
             if leading_spaces >= 2:
-                # Sub-bullet bercabang (○) disejajarkan dengan abjad
                 p = add_markdown_paragraph(doc, "○   " + text_part)
                 p.paragraph_format.left_indent = Pt(36)
                 p.paragraph_format.first_line_indent = Pt(-18)
             else:
-                # Bullet utama (•) disejajarkan sejajar dengan angka di pinggir
                 p = add_markdown_paragraph(doc, "•   " + text_part)
                 p.paragraph_format.left_indent = Pt(18)
                 p.paragraph_format.first_line_indent = Pt(-18)
 
         else:
-            add_markdown_paragraph(doc, clean_line)
+            add_markdown_paragraph(doc, safe_line)
 
     if is_table:
         render_table(is_identitas=in_identitas_block)
 
     # =======================================================
-    # 💡 4. PROSES PEWARNAAN LABEL KHUSUS KE DALAM FILE WORD
+    # 5. PROSES PEWARNAAN LABEL KHUSUS KE DALAM FILE WORD
     # =======================================================
     colors_map = {
         "[Memahami]": RGBColor(0x25, 0x63, 0xEB),      # Biru
@@ -412,7 +411,6 @@ def create_formatted_docx(text, title):
         if not p.runs:
             return
         
-        # Simpan format asli dari setiap potongan teks (run)
         original_runs = []
         for run in p.runs:
             original_runs.append({
@@ -423,10 +421,8 @@ def create_formatted_docx(text, title):
                 "color": run.font.color.rgb if run.font.color else None
             })
             
-        # Kosongkan teks di paragraf tersebut (tapi pertahankan spasi/indentasi)
         p.clear()
         
-        # Tulis ulang teksnya sambil menyisipkan warna yang sesuai
         for run_data in original_runs:
             parts = re.split(label_pattern, run_data["text"])
             for part in parts:
@@ -454,13 +450,10 @@ def create_formatted_docx(text, title):
             for cell in row.cells:
                 for p in cell.paragraphs:
                     apply_color_to_paragraph(p)
-    # =======================================================
-
 
     target_stream = BytesIO()
     doc.save(target_stream)
     return target_stream.getvalue()
-
 
 # --- FUNGSI GLOBAL ---
 def call_gemini_ai(api_key, prompt):
@@ -558,7 +551,24 @@ if page == "1. Bedah CP & TP":
             st.warning("Mohon lengkapi API Key dan teks CP.")
         else:
             with st.spinner("AI sedang membedah CP..."):
-                prompt = f"""Bertindaklah sebagai ahli kurikulum Spesialis Kurikulum Kemendikbudristek (Update BSKAP 046/2025). Analisis CP berikut: {cp_input}. 
+                prompt = f"""Bertindaklah sebagai ahli kurikulum, Spesialis Kurikulum Kemendikbudristek (Update BSKAP 046/2025). Analisis CP berikut: {cp_input}. 
+                ATURAN SANGAT PENTING UNTUK TABEL BEDAH CP (WAJIB DIIKUTI):
+                1. JANGAN PERNAH menggunakan tombol Enter (baris baru/newline) di dalam sel tabel.
+                2. Jika Anda perlu membuat poin-poin (list) atau baris baru di dalam sel tabel, Anda WAJIB menggunakan tag <br>. (Contoh: Poin 1<br>Poin 2<br>Poin 3).
+                3. Pastikan SETIAP baris tabel SELALU diawali dengan tanda "|" dan diakhiri dengan tanda "|". Jangan sampai terputus di tengah jalan karena teks yang panjang.
+                4. Jangan lupa sertakan garis pemisah judul kolom (|---|---|).
+                
+                ATURAN WAJIB PEMBUATAN TABEL:
+                Semua data  WAJIB disajikan dalam bentuk tabel Markdown yang standar.
+                Anda HARUS menyertakan Garis Pemisah (Divider) di bawah baris judul. Jika tidak, tabel akan rusak!
+                Gunakan format persis seperti contoh berikut:
+
+                | Judul Kolom 1 | Judul Kolom 2 | Judul Kolom 3 |
+                |---|---|---|
+                | Isi Baris 1 | Isi Baris 1 | Isi Baris 1 |
+                | Isi Baris 2 | Isi Baris 2 | Isi Baris 2 |
+                
+                
                 1. Buat tabel dengan format yang rapi analisis Kompetensi & Materi Pokok. 
                 2. Turunkan menjadi TP yang dibagi otomatis per kelas dalam {st.session_state.fase_terpilih} secara scaffolding.
                     Instruksi Analisis:
@@ -598,7 +608,19 @@ elif page == "2. Alur (ATP) & Pemetaan JP":
             with st.spinner("AI sedang menyusun alur..."):
                 prompt = f"""Buatlah tabel ATP berdasarkan data TP ini: {st.session_state.tp_result}.
                 Buatlah tabel Alur Tujuan Pembelajaran (ATP) dengan Output harus dalam tabel Markdown yang rapi untuk {st.session_state.fase_terpilih}.
-                buatkan secara lengkap dan rinci, WAJIB tampilkan pada kolom: No, Capaian Pembelajaran (CP), Elemen, Kelas, Semester, TP, Materi Pokok, Alokasi Waktu (JP)."""
+                buatkan secara lengkap dan rinci, WAJIB tampilkan pada kolom: No, Capaian Pembelajaran (CP), Elemen, Kelas, Semester, TP, Materi Pokok, Alokasi Waktu (JP).
+                ATURAN WAJIB PEMBUATAN TABEL:
+                Semua data (termasuk Analisis CP, ATP, dan Pemetaan JP) WAJIB disajikan dalam bentuk tabel Markdown yang standar.
+                Anda HARUS menyertakan Garis Pemisah (Divider) di bawah baris judul. Jika tidak, tabel akan rusak!
+                Gunakan format persis seperti contoh berikut:
+
+                | Judul Kolom 1 | Judul Kolom 2 | Judul Kolom 3 |
+                |---|---|---|
+                | Isi Baris 1 | Isi Baris 1 | Isi Baris 1 |
+                | Isi Baris 2 | Isi Baris 2 | Isi Baris 2 |
+                
+                """
+                
                 st.session_state.atp_result = call_gemini_ai(
                     st.session_state.api_key, prompt
                 )
@@ -621,14 +643,15 @@ elif page == "3. Modul Ajar Expert":
     st.markdown("""
     <style>
     @media print {
-        /* Sembunyikan sidebar, header, footer, dan tombol-tombol saat dicetak */
+        /* Sembunyikan sidebar, header, footer, tombol, DAN judul */
         [data-testid="stSidebar"], 
         header, 
         footer, 
         .stButton, 
         .stDownloadButton, 
         .stDivider,
-        iframe {
+        iframe,
+        .sembunyikan-saat-cetak {
             display: none !important;
         }
         
@@ -762,7 +785,7 @@ elif page == "3. Modul Ajar Expert":
             st.rerun()  # [PERBAIKAN] Menambahkan tanda kurung
 
     elif st.session_state.page_modul == 3:
-        st.title("✨ Hasil Modul Ajar")
+        st.markdown('<h2 class="sembunyikan-saat-cetak">✨ Hasil Modul Ajar</h2>', unsafe_allow_html=True)
         d = st.session_state.data_modul
 
         # [PERBAIKAN] Cek apakah hasil sudah ada, jika belum baru panggil AI
